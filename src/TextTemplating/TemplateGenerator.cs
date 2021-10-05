@@ -209,6 +209,11 @@ namespace T5.TextTemplating
 
         protected virtual string ResolveAssemblyReference (string assemblyReference)
         {
+            if (assemblyReference.IndexOf("$(", StringComparison.Ordinal) >= 0)
+            {
+                assemblyReference = ResolveParameterInAssembly(assemblyReference);
+            }
+            
             if (System.IO.Path.IsPathRooted (assemblyReference))
                 return assemblyReference;
             foreach (string referencePath in ReferencePaths) {
@@ -216,6 +221,7 @@ namespace T5.TextTemplating
                 if (System.IO.File.Exists (path))
                     return path;
             }
+            
 
             var assemblyName = new AssemblyName(assemblyReference);
             if (assemblyName.Version != null)//Load via GAC and return full path
@@ -224,6 +230,17 @@ namespace T5.TextTemplating
             if (!assemblyReference.EndsWith (".dll", StringComparison.OrdinalIgnoreCase) && !assemblyReference.EndsWith (".exe", StringComparison.OrdinalIgnoreCase))
                 return assemblyReference + ".dll";
             return assemblyReference;
+        }
+
+        private string ResolveParameterInAssembly(string assemblyReference)
+        {
+            var start = assemblyReference.IndexOf("$(", StringComparison.Ordinal);
+            var end = assemblyReference.IndexOf(")", StringComparison.Ordinal);
+            var name = assemblyReference.Substring(start + 2, end - start - 2);
+            var result = new StringBuilder();
+            var value = ResolveParameterValue("", "", name);
+            result.Append(value).Append(assemblyReference.Substring(end + 1));
+            return result.ToString();
         }
 
         protected virtual string ResolveParameterValue (string directiveId, string processorName, string parameterName)
